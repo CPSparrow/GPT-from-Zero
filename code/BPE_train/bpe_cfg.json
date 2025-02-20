@@ -1,0 +1,10 @@
+{
+    "bpe_dir": "./code/BPE_tokenizer",
+    "bpe_name": "bpe.json",
+    "cfg_dir": "./code/BPE_train",
+    "cfg_name": "bpe_cfg.json",
+    "file_index": 2,
+    "bpe_start": 40000,
+    "bpe_step": 40000,
+    "vocab_size": 16384
+}
