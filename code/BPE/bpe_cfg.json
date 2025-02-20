@@ -1,0 +1,8 @@
+{
+    "bpe_dir": "./code/BPE_tokenizer",
+    "bpe_name": "bpe.json",
+    "file_index": 1,
+    "bpe_start":0,
+    "bpe_step": 50000,
+    "vocab_size": 16384
+}
