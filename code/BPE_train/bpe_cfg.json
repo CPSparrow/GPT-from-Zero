@@ -3,8 +3,7 @@
     "bpe_name": "bpe.json",
     "cfg_dir": "./code/BPE_train",
     "cfg_name": "bpe_cfg.json",
-    "file_index": 2,
-    "bpe_start": 40000,
-    "bpe_step": 40000,
-    "vocab_size": 16384
+    "bpe_step": 50000,
+    "vocab_size": 32768,
+    "num_epoch":7
 }

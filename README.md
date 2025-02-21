@@ -1,10 +1,12 @@
-## 当前计划
+# 从0开始的llm训练冒险(并非)
+
+## 规划
 
 最开始的规模应该向gpt-2看齐(也许吧)。
 
-0. 训练tokenizer(BPE)~~和embedding(?)~~
-    - 测试```load_jsonl```函数
-    - 考虑BBPE？
+0. 训练tokenizer -> BPE ~~和embedding(?)~~
+    - 已完成: 测试```load_jsonl```函数 
+    - 已完成(略微存疑？): BBPE
 1. 基础Transfomer
     - 使用torch，或者transformers?
 2. 优化的transformer：RoPE,flash attention,swi激活函数，也许还有其他
@@ -12,6 +14,12 @@
     - 更大模型
     - accelerate库
 3. MoE架构，DS MoE？
+
+## 进度
+
+- 25.02.20： bpe代码基本完成，随后发现训练bpe只需要大约1GB的数据即可，而非原先预想的要把所有数据跑一遍(喜)
+- 25.02.18～29： 下载数据集，熟悉读取代码
+
 ## 数据来源(部分不考虑)
 - 传统文化： 还需清洗，懒得搞就不搞了
 - **基础语料**：目前就用这个了，质量比较高的中文语料，网安平台下载的

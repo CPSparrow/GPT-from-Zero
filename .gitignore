@@ -1,3 +1,5 @@
 corpus
 paper
 code/example
+*.pyc
+*test*

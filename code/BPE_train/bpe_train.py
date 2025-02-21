@@ -1,4 +1,5 @@
 import os
+from time import time
 import json
 import jsonlines
 from tqdm import tqdm
@@ -14,32 +15,39 @@ from tokenizers import (
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 
-def get_lines(file_path: str) -> int:
-    """
-    返回jsonl文件的行数
-    """
-    return int(os.popen(f"wc -l < '{file_path}'").read().strip())
-
-
-def load_jsonl(file: str, start: int, step: int):
+def load_data(epoch: int, steps: int):
     """
     return by yielding str
 
     Args:
-        file (str): file path
-        start (int): start index
-        step (int): lines to train
+        **epoch** (int):
+        正在进行的轮数
+
+        **step** (int): 
+        要读取的行数(实际会略多一些)
 
     Yields:
         str: text line
     """
-    with open(file, 'r', encoding='utf-8') as src:
-        for index, item in enumerate(jsonlines.Reader(src)):
-            if index < start:
-                continue
-            if index == start+step:
+    # 默认step为5_000,没有太多实际意义
+    with open("./corpus/pretrain/基础语料2.0/{:02}.jsonl".format(epoch*4+1),
+              'r', encoding='utf-8') as f:
+        cnt = 0
+        for index, item in enumerate(jsonlines.Reader(f)):
+            if cnt >= int(steps*0.9):
                 break
-            yield item['Content']
+            if index % 5 == 0:
+                cnt += 1
+                yield item['Content']
+
+    with open("./corpus/pretrain/c4/c4-train.00.json", 'r', encoding='utf-8') as f:
+        cnt = 0
+        for index, item in enumerate(jsonlines.Reader(f)):
+            if cnt >= int(steps*0.1):
+                break
+            if (index+epoch) % 7 == 0:
+                cnt += 1
+                yield item['text']
 
 
 if __name__ == "__main__":
@@ -52,18 +60,13 @@ if __name__ == "__main__":
     bpe_name = cfg['bpe_name']
     bpe_step = cfg['bpe_step']
     vocab_size = cfg['vocab_size']
-    # above will not change while training
-    file_index = cfg['file_index']
-    bpe_start = cfg['bpe_start']
+    num_epoch = cfg['num_epoch']
 
-    if file_index == 1 and bpe_start == 0:
-        bpe = Tokenizer(models.BPE())
-        bpe.pre_tokenizer = pre_tokenizers.ByteLevel(
-            add_prefix_space=False)
-    else:
-        bpe = Tokenizer.from_file(os.path.join(bpe_dir, bpe_name))
-        bpe.pre_tokenizer = pre_tokenizers.ByteLevel(
-            add_prefix_space=False)
+    # 因为bpe；似乎足够一次训练完成，就不保留读取的代码了
+    bpe = Tokenizer(models.BPE(
+        dropout=0.1, unk_token='<unk>'))
+    bpe.pre_tokenizer = pre_tokenizers.ByteLevel(
+        add_prefix_space=True)
 
     special_tokens = ["<unk>", "<s>", "</s>"]
     trainer = trainers.BpeTrainer(
@@ -71,45 +74,38 @@ if __name__ == "__main__":
         special_tokens=special_tokens,
         show_progress=True,
         initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
-        max_token_length=7
+        max_token_length=6
     )
 
     is_interrupted = False
-    num_epoch = 10
+    time_total = 0
     for epoch in range(num_epoch):
+        time_start = time()
 
-        file_index = cfg['file_index']
-        bpe_start = cfg['bpe_start']
-
-        file_path = "./corpus/pretrain/基础语料2.0/{:02}.jsonl".format(file_index)
-        assert os.path.exists(file_path), f"路径{file_path}不存在"
-        print("===== {:2} epoch:training {:02}.jsonl from {:6} to {:6}: =====".format(
-            epoch+1,file_index, bpe_start, bpe_start+bpe_step))
+        print("===== epoch:{:2}/{:2} =====".format(epoch+1, num_epoch))
         try:
             bpe.train_from_iterator(
-                load_jsonl(file_path, bpe_start, bpe_step), trainer
+                load_data(epoch=epoch, steps=bpe_step), trainer
             )
             bpe.decoder = decoders.ByteLevel()
         except KeyboardInterrupt:
             is_interrupted = True
             break
 
+        time_cost = time()-time_start
+        time_total += time_cost
+
         if not is_interrupted:
-            max_lines = get_lines(file_path)
-            print(
-                f"max_lines:{max_lines} progress:{(bpe_start+bpe_step)/max_lines*100}\%")
-            if bpe_start+bpe_step >= max_lines:
-                cfg["file_index"] += 1
-                cfg["bpe_start"] = 0
-            else:
-                cfg["bpe_start"] += bpe_step
+            print("training of epoch {:} cost {:.2f}s,toal:{:.2f}s".format(
+                epoch+1, time_cost, time_total))
+            # 保存BPE文件
             os.makedirs(bpe_dir, exist_ok=True)
             bpe.save(os.path.join(bpe_dir, bpe_name))
             bpe.model.save(bpe_dir)
-            with open(os.path.join(cfg_dir, cfg_name), 'w') as file:
-                json.dump(cfg, file, ensure_ascii=False, indent=4)
 
     if is_interrupted:
-        print("training stopped")
+        print("===== training stopped =====")
     else:
-        print(f"training ended good.")
+        print(f"===== training ended good. =====")
+        print("      total time       :{:.2f}s".format(time_total))
+        print("average time per epoch :{:.2f}s".format(time_total/num_epoch))
