@@ -7,6 +7,7 @@ from tokenizers import (
     Tokenizer,
     models,
     pre_tokenizers,
+    normalizers,
     trainers,
     decoders
 )
@@ -63,10 +64,11 @@ if __name__ == "__main__":
     num_epoch = cfg['num_epoch']
 
     # 因为bpe；似乎足够一次训练完成，就不保留读取的代码了
-    bpe = Tokenizer(models.BPE(
-        dropout=0.1, unk_token='<unk>'))
-    bpe.pre_tokenizer = pre_tokenizers.ByteLevel(
-        add_prefix_space=True)
+    bpe = Tokenizer(models.BPE(dropout=0.1, unk_token='<unk>'))
+    bpe.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=True)
+    bpe.normalizer = normalizers.Sequence(
+        [normalizers.NFD(), normalizers.StripAccents()]
+    )
 
     special_tokens = ["<unk>", "<s>", "</s>"]
     trainer = trainers.BpeTrainer(
@@ -74,7 +76,8 @@ if __name__ == "__main__":
         special_tokens=special_tokens,
         show_progress=True,
         initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
-        max_token_length=6
+        max_token_length=6,
+        min_frequency=2
     )
 
     is_interrupted = False
@@ -101,7 +104,6 @@ if __name__ == "__main__":
             # 保存BPE文件
             os.makedirs(bpe_dir, exist_ok=True)
             bpe.save(os.path.join(bpe_dir, bpe_name))
-            bpe.model.save(bpe_dir)
 
     if is_interrupted:
         print("===== training stopped =====")
