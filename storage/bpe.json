@@ -43,7 +43,7 @@
     ]
   },
   "pre_tokenizer": {
-    "type": "ByteLevel",
+    "type": "gpt-2",
     "add_prefix_space": true,
     "trim_offsets": true,
     "use_regex": true

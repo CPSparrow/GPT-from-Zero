@@ -12,6 +12,10 @@ from tokenizers import (
     decoders
 )
 
+"""
+这里存放着 load_data 的代码，因为经过了验证所以不需要改动也不需要调整。
+这里的代码预期是训练一个 type 为 bpe 的 tokenizer
+"""
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -31,7 +35,7 @@ def load_data(epoch: int, steps: int):
         str: text line
     """
     # 默认step为5_000,没有太多实际意义
-    with open("./corpus/pretrain/基础语料2.0/{:02}.jsonl".format(epoch*4+1),
+    with open("./corpus/基础语料2.0/split_1/{:02}.jsonl".format(epoch*2+1),
               'r', encoding='utf-8') as f:
         cnt = 0
         for index, item in enumerate(jsonlines.Reader(f)):
@@ -41,7 +45,7 @@ def load_data(epoch: int, steps: int):
                 cnt += 1
                 yield item['Content']
 
-    with open("./corpus/pretrain/c4/c4-train.00.json", 'r', encoding='utf-8') as f:
+    with open("./corpus/c4/c4-train.00.json", 'r', encoding='utf-8') as f:
         cnt = 0
         for index, item in enumerate(jsonlines.Reader(f)):
             if cnt >= int(steps*0.1):
