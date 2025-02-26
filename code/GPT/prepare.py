@@ -1,9 +1,12 @@
+import re
+from time import time
 from datasets import load_dataset
+from collections import defaultdict
 from transformers import (
     AutoTokenizer,
     GPT2Config,
     GPT2LMHeadModel,
-    AutoModel,
+    BatchEncoding,
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling
@@ -21,88 +24,124 @@ def token_test(tokenizer):
     print(de)
 
 
-if __name__ == "__main__":
-    # tokenizer = AutoTokenizer.from_pretrained(
-    #     pretrained_model_name_or_path="gpt2")
-    tokenizer = AutoTokenizer.from_pretrained(
-        "./code/bpe_fast",  # pad_token="</s>"
-    )
+def main():
+    use_gpt2 = False
+    if use_gpt2:
+        tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path="gpt2")
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(
+            "./code/bpe_fast",
+        )
 
     if False:
         token_test(tokenizer)
 
+    # the cfgs
+    max_length = 768
+    batch_size = 2
+
     def preprocess(samples):
-        texts=list()
-        for line in samples['Content']:
-            for sentence in line.split("。"):
+        """
+        根据map的输入处理并返回 BatchEncoding
+        已经确保长度不会超过1024(应该)
+
+        Args:
+            samples (list[str]): batched strings
+
+        Returns:
+            tokens (BatchEncoding):
+        """
+        tokens = defaultdict(list)
+        for passage in samples['Content']:
+            total, cnt = 0, 0
+            ids, masks = list(), list()
+            for sentence in re.split("\n|\r|\t|\f|。| ", passage):
                 if len(sentence) > 5:
                     sentence = sentence[1:] if sentence[0] == '\n' else sentence
-                    texts.append(sentence)
-        return tokenizer(texts)
+                    sentence += "。"
+                    encode = tokenizer(sentence)
+                    cnt = len(encode["input_ids"])
+                    if cnt > max_length:
+                        # drop the too long sentence
+                        continue
+                    if total+cnt >= max_length-2:
 
-    def group_texts(examples):
-        # Concatenate all texts.
-        concatenated_examples = {
-            k: sum(examples[k], []) for k in examples.keys()}
-        total_length = len(concatenated_examples[list(examples.keys())[0]])
-        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-        # customize this part to your needs.
-        if total_length >= block_size:
-            total_length = (total_length // block_size) * block_size
-        # Split by chunks of block_size.
-        result = {
-            k: [t[i: i + block_size]
-                for i in range(0, total_length, block_size)]
-            for k, t in concatenated_examples.items()
-        }
-        # result["labels"] = result["input_ids"].copy()
-        return result
+                        ids.insert(0, tokenizer.bos_token_id)
+                        ids.append(tokenizer.eos_token_id)
 
-    block_size = 768
-    num_proc = 20
+                        masks.insert(0, 1)
+                        masks.append(1)
+
+                        assert len(ids) <= max_length, \
+                            f"too long add:{tokenizer.decode(ids)}\nnow sentence is {sentence}\n\
+                                ids:{len(ids)},sentence:{len(sentence)}"
+                        tokens["input_ids"].append(ids)
+                        tokens["attention_mask"].append(masks)
+
+                        ids, masks = list(), list()
+                        total = 0
+
+                    total += cnt
+                    ids.extend(encode["input_ids"])
+                    masks.extend(encode["attention_mask"])
+            if len(ids) > 0:
+                ids.extend([tokenizer.eos_token_id, tokenizer.bos_token_id])
+                masks.extend([1, 1])
+        if len(ids) > 0:
+            assert len(ids) <= max_length, \
+                f"too long left:{tokenizer.decode(ids)}\ncnt:{len(ids)}"
+            tokens["input_ids"].append(ids)
+            tokens["attention_mask"].append(masks)
+        return BatchEncoding(tokens)
+
+    num_proc, preprocess_batch_size = 20, 20
+    split_start, split_end = 0, 4_0000
     base2 = load_dataset(
-        "./corpus/基础语料2.0/split_1", split="train[:50000]", num_proc=num_proc
+        "./corpus/基础语料2.0/split_1",
+        split=f"train[{split_start}:{split_end}]", num_proc=num_proc
     )
-
     base2 = base2.train_test_split(test_size=0.2)
     base2 = base2.map(
         preprocess,
         batched=True,
-        batch_size=1,
+        batch_size=preprocess_batch_size,
         num_proc=num_proc,
         remove_columns=base2["train"].column_names
     )
-    base2 = base2.map(
-        group_texts,
-        batched=True,
-        num_proc=num_proc
-    )
-    print(base2)
 
-    tokenizer.pad_token = tokenizer.eos_token
+    # note that padding strategy seems remaining to be added
     data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer, mlm=False
+        tokenizer=tokenizer, mlm=False, pad_to_multiple_of=max_length
     )
 
     cfg = GPT2Config(
         vocab_size=tokenizer.vocab_size,
-        n_head=12, n_layer=10,
+        n_embd=768,
+        n_positions=max_length,
+        n_head=6, n_layer=6,
         bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id
     )
     model = GPT2LMHeadModel(cfg)
 
-    steps = 500
-    num_epoch=3
-    batch_size=12
+    model_size = sum(t.numel() for t in model.parameters())
+    print("===== About to Start =====")
+    print(f"Model size: {model_size/1000**2:.1f}M parameters")
+
     training_args = TrainingArguments(
         output_dir="./code/GPT_model",
         eval_strategy="steps",
-        eval_steps=steps,
-        num_epoch=num_epoch,
+        eval_steps=50,
+        torch_compile=True,
+        # use_cpu=True,
+        fp16=True,
+        optim="adafactor",
+        num_train_epochs=3,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=2e-5,
         weight_decay=0.01,
+        gradient_accumulation_steps=2
     )
 
     trainer = Trainer(
@@ -114,7 +153,11 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
     )
 
-    model_size = sum(t.numel() for t in model.parameters())
-    print(f"GPT-2 size: {model_size/1000**2:.1f}M parameters")
-    print(base2)
     trainer.train()
+
+
+if __name__ == "__main__":
+    main_start = time()
+    main()
+    main_end = time()
+    print(f"total time used:{main_end-main_start:.2f}s")

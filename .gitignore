@@ -3,3 +3,4 @@ paper
 code/example
 *.pyc
 *test*
+checkpoint*
