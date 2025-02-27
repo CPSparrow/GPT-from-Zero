@@ -6,6 +6,7 @@
 举例：\
 ```[{'generated_text': '村民们都很高兴，在“““””””””””””””””””””””””””””””””““““““““““““““““'}]```\
 原因猜测：vocab_size,embed_dim或是train_steps太小导致的训练不足(训练时eval loss > 7)
+    - 补充：也有可能是weight_decay的原因。至于其他的超参数则不清楚了。
 - 25.02.25: 重写了BPE的训练。基于AutoTokenizer的训练使得后续可以方便的调用。同时基本写好了训练的框架(即```prepare.py```文件)。稍后的任务是调整正确的DataLoader和DataCollector
 - 25.02.24: 周末休息之后重新查阅资料，准备重写代码。对于接下来的基本计划如下
     - 借助AutoTokenizers重新训练BPE(而且似乎这样可以直接得到FastTokenizer),需要适当调整special tokens

@@ -133,11 +133,11 @@ def main():
     training_args = TrainingArguments(
         output_dir="./code/GPT_model",
         eval_strategy="steps",
-        eval_steps=50,
+        eval_steps=70,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=2e-5,
-        weight_decay=0.01,
+        weight_decay=0.0001,
         num_train_epochs=2,
         dataloader_drop_last=True,
 
