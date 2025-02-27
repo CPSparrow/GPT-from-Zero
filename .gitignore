@@ -4,3 +4,4 @@ code/example
 *.pyc
 *test*
 checkpoint*
+*logs

@@ -39,7 +39,7 @@ def main():
 
     # the cfgs
     max_length = 768
-    batch_size = 2
+    batch_size = 6
 
     def preprocess(samples):
         """
@@ -95,8 +95,8 @@ def main():
             tokens["attention_mask"].append(masks)
         return BatchEncoding(tokens)
 
-    num_proc, preprocess_batch_size = 20, 20
-    split_start, split_end = 0, 4_0000
+    split_start, split_end = 0, 8_0000
+    num_proc, preprocess_batch_size = 20, (split_end-split_start)//40
     base2 = load_dataset(
         "./corpus/基础语料2.0/split_1",
         split=f"train[{split_start}:{split_end}]", num_proc=num_proc
@@ -119,8 +119,9 @@ def main():
         vocab_size=tokenizer.vocab_size,
         n_embd=768,
         n_positions=max_length,
-        n_head=6, n_layer=6,
-        bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id
+        n_head=12, n_layer=12,
+        # attn_implementation="flash_attention_2",
+        bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id,
     )
     model = GPT2LMHeadModel(cfg)
 
@@ -132,16 +133,19 @@ def main():
         output_dir="./code/GPT_model",
         eval_strategy="steps",
         eval_steps=50,
-        torch_compile=True,
-        # use_cpu=True,
-        fp16=True,
-        optim="adafactor",
-        num_train_epochs=3,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=2e-5,
         weight_decay=0.01,
-        gradient_accumulation_steps=2
+        num_train_epochs=2,
+        dataloader_drop_last=True,
+
+        # below are args used for debug or efficient training
+        # use_cpu=True,
+        fp16=True,
+        gradient_accumulation_steps=12,
+        optim="adafactor",
+        torch_compile=True,
     )
 
     trainer = Trainer(
