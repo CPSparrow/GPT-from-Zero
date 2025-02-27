@@ -30,8 +30,9 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path="gpt2")
     else:
+        bpe_size = "30k"
         tokenizer = AutoTokenizer.from_pretrained(
-            "./code/bpe_fast",
+            f"./code/bpe_fast/{bpe_size}",
         )
 
     if False:

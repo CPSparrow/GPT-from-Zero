@@ -34,25 +34,8 @@ def load_data(epoch: int, steps: int):
     Yields:
         str: text line
     """
-    # 默认step为5_000,没有太多实际意义
-    with open("./corpus/基础语料2.0/split_1/{:02}.jsonl".format(epoch*2+1),
-              'r', encoding='utf-8') as f:
-        cnt = 0
-        for index, item in enumerate(jsonlines.Reader(f)):
-            if cnt >= int(steps*0.9):
-                break
-            if index % 5 == 0:
-                cnt += 1
-                yield item['Content']
 
-    with open("./corpus/c4/c4-train.00.json", 'r', encoding='utf-8') as f:
-        cnt = 0
-        for index, item in enumerate(jsonlines.Reader(f)):
-            if cnt >= int(steps*0.1):
-                break
-            if (index+epoch) % 7 == 0:
-                cnt += 1
-                yield item['text']
+    raise NotImplementedError("should be rewrite with datasets")
 
 
 if __name__ == "__main__":
