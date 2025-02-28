@@ -28,6 +28,7 @@ if __name__ == "__main__":
         bos_token="<s>", eos_token="</s>", unk_token="<unk>", pad_token="<pad>",
         vocab_size=vocab_size, add_prefix=True
     )
+    assert False
     for epoch in range(num_epoch):
         time_start = time()
 

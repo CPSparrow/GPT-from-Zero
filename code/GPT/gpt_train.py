@@ -1,4 +1,5 @@
 import re
+import os
 from time import time
 from datasets import load_dataset
 from collections import defaultdict
@@ -15,32 +16,37 @@ from transformers import (
 
 def token_test(tokenizer):
     en = tokenizer(
-        ["base2=load_dataset(/corpus/split_1/基础语料2.0split=train[:500])",
-         "Start by loading the first 5000 examples from the ELI5-Category dataset with the ",
-         "🤗 Datasets library. This’ll give you a chance to experiment and make sure ", "everything works before spending more time training on the full dataset."])
+        [
+            "今天是个上分的好日子啊",
+            "base2=load_dataset(/corpus/split_1/基础语料2.0split=train[:500])",
+            "Start by loading the first 5000 examples from the ELI5-Category dataset with the ",
+            "🤗 Datasets library. This’ll give you a chance to experiment and make sure ", "everything works before spending more time training on the full dataset."
+        ])
     # assert False
-    de = tokenizer.convert_ids_to_tokens(en['input_ids'][3])
-    id = tokenizer.bos_token_id
-    print(de)
+    for ids in en['input_ids']:
+        print(tokenizer.convert_ids_to_tokens(ids))
 
 
 def main():
+    bpe_name = "30k"
+    max_length = 1024
+    batch_size = 2
     use_gpt2 = False
+    split_start, split_end = 0, 20_000
+    num_proc, preprocess_batch_size = os.cpu_count(), (split_end-split_start)//40
+
     if use_gpt2:
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path="gpt2")
     else:
-        bpe_size = "30k"
         tokenizer = AutoTokenizer.from_pretrained(
-            f"./code/bpe_fast/{bpe_size}",
+            f"./code/bpe_fast/{bpe_name}", max_length=max_length
         )
 
+    # tokenizer debug
     if False:
         token_test(tokenizer)
-
-    # the cfgs
-    max_length = 768
-    batch_size = 6
+        assert False
 
     def preprocess(samples):
         """
@@ -54,11 +60,19 @@ def main():
             tokens (BatchEncoding):
         """
         tokens = defaultdict(list)
+
+        total, cnt = 0, 0
+        ids, masks = list(), list()
+
         for passage in samples['Content']:
-            total, cnt = 0, 0
-            ids, masks = list(), list()
-            for sentence in re.split("\n|\r|\t|\f|。| ", passage):
-                if len(sentence) > 5:
+            ids.append(tokenizer.bos_token_id)
+            masks.append(1)
+            total += 1
+
+            for sentences in re.split("\n|\r|\t|\f|。| ", passage):
+                for sentence in sentences.split("。"):
+                    if len(sentence) <= 5:
+                        continue
                     sentence = sentence[1:] if sentence[0] == '\n' else sentence
                     sentence += "。"
                     encode = tokenizer(sentence)
@@ -74,9 +88,13 @@ def main():
                         masks.insert(0, 1)
                         masks.append(1)
 
+                        if len(ids) > max_length and ids[-2:] == [tokenizer.bos_token_id, tokenizer.eos_token_id]:
+                            # print(f"==== tail:{tokenizer.decode(ids[-2:])}")
+                            ids = ids[:-2]
+                            masks = masks[:-2]
+
                         assert len(ids) <= max_length, \
-                            f"too long add:{tokenizer.decode(ids)}\nnow sentence is {sentence}\n\
-                                ids:{len(ids)},sentence:{len(sentence)}"
+                            f"too long add:{tokenizer.decode(ids)}\nids:{len(ids)},sentence:{len(sentence)},cnt:{cnt}"
                         tokens["input_ids"].append(ids)
                         tokens["attention_mask"].append(masks)
 
@@ -86,18 +104,17 @@ def main():
                     total += cnt
                     ids.extend(encode["input_ids"])
                     masks.extend(encode["attention_mask"])
-            if len(ids) > 0:
-                ids.extend([tokenizer.eos_token_id, tokenizer.bos_token_id])
-                masks.extend([1, 1])
-        if len(ids) > 0:
+
+            ids.append(tokenizer.eos_token_id)
+            masks.append(1)
+            total += 1
+        if len(ids) > 0 and len(ids) <= max_length:
             assert len(ids) <= max_length, \
-                f"too long left:{tokenizer.decode(ids)}\ncnt:{len(ids)}"
+                f"too long left:{tokenizer.decode(ids)}\nids:{len(ids)},sentence:{len(sentences)},cnt:{cnt}"
             tokens["input_ids"].append(ids)
             tokens["attention_mask"].append(masks)
         return BatchEncoding(tokens)
 
-    split_start, split_end = 0, 8_0000
-    num_proc, preprocess_batch_size = 20, (split_end-split_start)//40
     base2 = load_dataset(
         "./corpus/基础语料2.0/split_1",
         split=f"train[{split_start}:{split_end}]", num_proc=num_proc
@@ -111,6 +128,13 @@ def main():
         remove_columns=base2["train"].column_names
     )
 
+    # dataset validation
+    if False:
+        from random import randint
+        for i in range(5):
+            print(f"line {i+1}")
+            print(tokenizer.decode(base2["train"]['input_ids'][randint(0, 800)]))
+        assert False
     # note that padding strategy seems remaining to be added
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False, pad_to_multiple_of=max_length
@@ -118,9 +142,9 @@ def main():
 
     cfg = GPT2Config(
         vocab_size=tokenizer.vocab_size,
-        n_embd=768,
+        n_embd=1024,
         n_positions=max_length,
-        n_head=12, n_layer=12,
+        n_head=16, n_layer=16,
         # attn_implementation="flash_attention_2",
         bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id,
     )
