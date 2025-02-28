@@ -1,37 +1,25 @@
-import numpy as np
-from collections import defaultdict
-import jsonlines
-import os
-import json
-from tokenizers import Tokenizer
-
+from transformers import AutoTokenizer
 # output be like:
 # 端午节是中国的传统节日之一，粽子作为节日的象征，
 # 端午|节|是|中国|的|传统|节日|之一|，|粽子|作为|节日|的|象征|，
 # |端|午节|是|中国|的|传统|节日|之一|，|�|�|子|作为|节|日的|象|征|，
 
-text = "端午节是中国的传统节日之一，粽子作为节日的象征，"
-# text = 'bpe代码基本完成，随后发现训练bpe只需要大约1GB的数据即可，而非原先预想的要把所有数据跑一遍'
-with open('./code/BPE_train/bpe_cfg.json', 'r', encoding='utf-8') as cfg_src:
-    cfg = json.load(cfg_src)
-
-bpe_dir = cfg['bpe_dir']
-bpe_name = cfg['bpe_name']
-
-bpe = Tokenizer.from_file("./code/BPE_tokenizer/bpe.json")
-bpe_2 = Tokenizer.from_file("./code/BPE_tokenizer/bpe_50k.json")
-encode = bpe.encode(text)
-print("split:", "|".join(bpe.decode(encode.ids)))
-
-res = defaultdict(list)
-with open("./corpus/pretrain/基础语料2.0/01.jsonl", 'r', encoding="utf-8") as f:
-    for index, item in enumerate(jsonlines.Reader(f)):
-        if index >= 100:
-            break
-        res['30k'].append(len(bpe.encode(item['Content'])))
-        res['50k'].append(len(bpe_2.encode(item['Content'])))
-        res['raw'].append(len(item['Content']))
-
-print(np.average(np.array(res['30k'])))
-print(np.average(np.array(res['50k'])))
-print(np.average(np.array(res['raw'])))
+text = [
+    "端午节是中国的传统节日之一，粽子作为节日的象征，",
+    "证监会官方网站近日发布关于政协十四届全国委员会第二次会议第02650号（财税金融类171号）提案答复的函。证监会在函中表示，目前我国境内设有上海、深圳、北京三家证券交易所，全面实行注册制落地后，多层次资本市场体系更加清晰，较大程度满足了不同行业、不同类型、不同成长阶段企业的需求，沪深北三家证券交易所均在成渝地区设有市场基地，为西部地区提供直接便利的资本市场服务，发挥服务实体经济高质量发展的重要作用。"
+]
+bpe = AutoTokenizer.from_pretrained(
+    "./code/bpe_fast/32k_v1", max_length=4096
+)
+tokens = bpe(text)
+for ids in tokens['input_ids']:
+    print("|".join([bpe.decode(id) for id in ids]))
+    print("=====")
+print("v2:\n")
+bpe = AutoTokenizer.from_pretrained(
+    "./code/bpe_fast/32k_v2", max_length=4096
+)
+tokens = bpe(text)
+for ids in tokens['input_ids']:
+    print("|".join([bpe.decode(id) for id in ids]))
+    print("=====")
