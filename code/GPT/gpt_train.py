@@ -28,19 +28,18 @@ def token_test(tokenizer):
 
 
 def main():
-    bpe_name = "30k"
+    bpe_name = "32k_v1"
     max_length = 1024
-    batch_size = 2
+    batch_size = 8
     use_gpt2 = False
-    split_start, split_end = 0, 20_000
-    num_proc, preprocess_batch_size = os.cpu_count(), (split_end-split_start)//40
+    num_proc, preprocess_batch_size = 12, 10_0000
 
     if use_gpt2:
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path="gpt2")
     else:
         tokenizer = AutoTokenizer.from_pretrained(
-            f"./code/bpe_fast/{bpe_name}", max_length=max_length
+            f"./code/bpe_fast/{bpe_name}", max_length=4096
         )
 
     # tokenizer debug
@@ -117,7 +116,9 @@ def main():
 
     base2 = load_dataset(
         "./corpus/基础语料2.0/split_1",
-        split=f"train[{split_start}:{split_end}]", num_proc=num_proc
+        # split="train",
+        split="train[:50000]",
+        num_proc=num_proc
     )
     base2 = base2.train_test_split(test_size=0.2)
     base2 = base2.map(
@@ -157,12 +158,12 @@ def main():
     training_args = TrainingArguments(
         output_dir="./code/GPT_model",
         eval_strategy="steps",
-        eval_steps=70,
+        eval_steps=200,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        learning_rate=2e-5,
+        learning_rate=2.5e-4,
         weight_decay=0.0001,
-        num_train_epochs=2,
+        num_train_epochs=100,
         dataloader_drop_last=True,
 
         # below are args used for debug or efficient training
@@ -179,7 +180,7 @@ def main():
         train_dataset=base2["train"],
         eval_dataset=base2["test"],
         data_collator=data_collator,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
     )
 
     trainer.train()
