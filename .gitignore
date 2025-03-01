@@ -6,3 +6,5 @@ code/example
 checkpoint*
 *logs
 .ipynb_checkpoints
+events.out.*
+cache

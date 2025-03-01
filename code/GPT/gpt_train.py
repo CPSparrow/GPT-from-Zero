@@ -1,5 +1,6 @@
 import re
 import os
+import torch
 from time import time
 from datasets import load_dataset
 from collections import defaultdict
@@ -30,7 +31,7 @@ def token_test(tokenizer):
 def main():
     bpe_name = "32k_v1"
     max_length = 1024
-    batch_size = 8
+    batch_size = 24
     use_gpt2 = False
     num_proc, preprocess_batch_size = 12, 10_0000
 
@@ -114,10 +115,11 @@ def main():
             tokens["attention_mask"].append(masks)
         return BatchEncoding(tokens)
 
+    corpus_size=100_0000
     base2 = load_dataset(
         "./corpus/基础语料2.0/split_1",
-        # split="train",
-        split="train[:50000]",
+        cache_dir="./cache",
+        split=f"train[:{corpus_size}]",
         num_proc=num_proc
     )
     base2 = base2.train_test_split(test_size=0.2)
@@ -144,9 +146,10 @@ def main():
     cfg = GPT2Config(
         vocab_size=tokenizer.vocab_size,
         n_embd=1024,
+        torch_dtype=torch.bfloat16,
         n_positions=max_length,
         n_head=16, n_layer=16,
-        # attn_implementation="flash_attention_2",
+        attn_implementation="flash_attention_2",
         bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id,
     )
     model = GPT2LMHeadModel(cfg)
@@ -168,9 +171,9 @@ def main():
 
         # below are args used for debug or efficient training
         # use_cpu=True,
-        fp16=True,
-        gradient_accumulation_steps=12,
-        optim="adafactor",
+        bf16=True,
+        gradient_accumulation_steps=20,
+        optim="adamw_apex_fused",
         torch_compile=True,
     )
 
