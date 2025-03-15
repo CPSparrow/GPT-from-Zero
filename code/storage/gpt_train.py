@@ -21,7 +21,8 @@ def token_test(tokenizer):
             "今天是个上分的好日子啊",
             "base2=load_dataset(/corpus/split_1/基础语料2.0split=train[:500])",
             "Start by loading the first 5000 examples from the ELI5-Category dataset with the ",
-            "🤗 Datasets library. This’ll give you a chance to experiment and make sure ", "everything works before spending more time training on the full dataset."
+            "🤗 Datasets library. This’ll give you a chance to experiment and make sure ",
+            "everything works before spending more time training on the full dataset."
         ])
     # assert False
     for ids in en['input_ids']:
@@ -34,7 +35,7 @@ def main():
     batch_size = 24
     use_gpt2 = False
     num_proc, preprocess_batch_size = 12, 10_0000
-
+    
     if use_gpt2:
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path="gpt2")
@@ -42,12 +43,12 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(
             f"./code/bpe_fast/{bpe_name}", max_length=4096
         )
-
+    
     # tokenizer debug
     if False:
         token_test(tokenizer)
         assert False
-
+    
     def preprocess(samples):
         """
         根据map的输入处理并返回 BatchEncoding
@@ -60,15 +61,15 @@ def main():
             tokens (BatchEncoding):
         """
         tokens = defaultdict(list)
-
+        
         total, cnt = 0, 0
         ids, masks = list(), list()
-
+        
         for passage in samples['Content']:
             ids.append(tokenizer.bos_token_id)
             masks.append(1)
             total += 1
-
+            
             for sentences in re.split("\n|\r|\t|\f|。| ", passage):
                 for sentence in sentences.split("。"):
                     if len(sentence) <= 5:
@@ -80,42 +81,42 @@ def main():
                     if cnt > max_length:
                         # drop the too long sentence
                         continue
-                    if total+cnt >= max_length-2:
-
+                    if total + cnt >= max_length - 2:
+                        
                         ids.insert(0, tokenizer.bos_token_id)
                         ids.append(tokenizer.eos_token_id)
-
+                        
                         masks.insert(0, 1)
                         masks.append(1)
-
+                        
                         if len(ids) > max_length and ids[-2:] == [tokenizer.bos_token_id, tokenizer.eos_token_id]:
                             # print(f"==== tail:{tokenizer.decode(ids[-2:])}")
                             ids = ids[:-2]
                             masks = masks[:-2]
-
+                        
                         assert len(ids) <= max_length, \
                             f"too long add:{tokenizer.decode(ids)}\nids:{len(ids)},sentence:{len(sentence)},cnt:{cnt}"
                         tokens["input_ids"].append(ids)
                         tokens["attention_mask"].append(masks)
-
+                        
                         ids, masks = list(), list()
                         total = 0
-
+                    
                     total += cnt
                     ids.extend(encode["input_ids"])
                     masks.extend(encode["attention_mask"])
-
+            
             ids.append(tokenizer.eos_token_id)
             masks.append(1)
             total += 1
-        if len(ids) > 0 and len(ids) <= max_length:
+        if 0 < len(ids) <= max_length:
             assert len(ids) <= max_length, \
                 f"too long left:{tokenizer.decode(ids)}\nids:{len(ids)},sentence:{len(sentences)},cnt:{cnt}"
             tokens["input_ids"].append(ids)
             tokens["attention_mask"].append(masks)
         return BatchEncoding(tokens)
-
-    corpus_size=100_0000
+    
+    corpus_size = 100_0000
     base2 = load_dataset(
         "./corpus/基础语料2.0/split_1",
         cache_dir="./cache",
@@ -130,19 +131,19 @@ def main():
         num_proc=num_proc,
         remove_columns=base2["train"].column_names
     )
-
+    
     # dataset validation
     if False:
         from random import randint
         for i in range(5):
-            print(f"line {i+1}")
+            print(f"line {i + 1}")
             print(tokenizer.decode(base2["train"]['input_ids'][randint(0, 800)]))
         assert False
     # note that padding strategy seems remaining to be added
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False, pad_to_multiple_of=max_length
     )
-
+    
     cfg = GPT2Config(
         vocab_size=tokenizer.vocab_size,
         n_embd=1024,
@@ -153,11 +154,11 @@ def main():
         bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id,
     )
     model = GPT2LMHeadModel(cfg)
-
+    
     model_size = sum(t.numel() for t in model.parameters())
     print("===== About to Start =====")
-    print(f"Model size: {model_size/1000**2:.1f}M parameters")
-
+    print(f"Model size: {model_size / 1000 ** 2:.1f}M parameters")
+    
     training_args = TrainingArguments(
         output_dir="./code/GPT_model",
         eval_strategy="steps",
@@ -168,7 +169,7 @@ def main():
         weight_decay=0.0001,
         num_train_epochs=100,
         dataloader_drop_last=True,
-
+        
         # below are args used for debug or efficient training
         # use_cpu=True,
         bf16=True,
@@ -176,7 +177,7 @@ def main():
         optim="adamw_apex_fused",
         torch_compile=True,
     )
-
+    
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -185,7 +186,7 @@ def main():
         data_collator=data_collator,
         processing_class=tokenizer,
     )
-
+    
     trainer.train()
 
 
@@ -193,4 +194,4 @@ if __name__ == "__main__":
     main_start = time()
     main()
     main_end = time()
-    print(f"total time used:{main_end-main_start:.2f}s")
+    print(f"total time used:{main_end - main_start:.2f}s")
