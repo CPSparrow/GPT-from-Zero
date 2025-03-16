@@ -1,5 +1,81 @@
 # 从0开始的**中文GPT-2**训练冒险😘️
 
+## 数据来源(部分并不会考虑)
+
+- 传统文化: 还需清洗，懒得搞就不搞了
+- **基础语料**:目前就用这个了，质量比较高的中文语料，网安平台下载的
+- cci: 来源同上，还没下载来
+- oscar: 来自mnbvc的crawler文件夹
+- ~~[CLUECorpus2020](https://github.com/CLUEbenchmark/CLUECorpus2020)~~ 通过百度网盘提供，所以不想搞
+- [liwu/MNBVC](https://huggingface.co/datasets/liwu/MNBVC) 超大规模数据集，oscar是common crawl的清洗，可以作为初步预训练的语料。
+- [c4](https://hf-mirror.com/datasets/allenai/c4/tree/main/en) 可以作为英文训练
+- [smoltalk](https://opencsg.com/datasets/OpenCSG/smoltalk_chinese/files/main/data) 作为sft语料
+
+## 数据集预处理笔记
+
+|   数据集   |  数据条数   |   文件大小 |
+|:-------:|:-------:|-------:|
+|  news   | 67_6028 | 2.10GB |
+| crawler | 38_9713 | 0.23GB |
+|  zhihu  | 65_3692 | 1.40GB |
+|   en    | 35_6317 | 0.77GB |
+
+## 环境配置笔记
+
+主要是为了上云和重置的时候方便查阅：
+
+- cuda/nvcc >= 12.4
+
+installation:
+
+```shell
+pip install torch torchvision torchaudio
+pip install transformers datasets accelerate optimum
+pip install pandas ninja packaging
+```
+
+validation before flash attention 2:
+
+```shell
+ninja --version
+echo $?
+```
+
+随后手动安装nvidia/apex和flash attention 2:
+
+apex:
+
+```shell
+git clone https://github.com/NVIDIA/apex
+cd apex
+NVCC_APPEND_FLAGS="--threads 4" pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext --cuda_ext --parallel 4" ./
+```
+
+flash attention：
+
+```shell
+MAX_JOBS=4 pip install flash-attn --no-build-isolation
+```
+
+安装后清理缓存：
+pip:
+
+```shell
+pip cache purge
+```
+
+conda:
+运行前查看：
+
+```shell
+conda clean --dry-run --all
+```
+
+```shell
+conda clean --tarballs
+conda clean --packages
+```
+
 ## 进度(Updates)
 
 - 25.03.15:
@@ -12,6 +88,10 @@
     - 整理、阅读原先代码
     - 重写dataloader以及相关部分，中间可能会涉及 `dataclass` 的学习。
     - 可能会使用手动设计的代码训练，验证和保存模型。
+
+  今日完成的部分：
+
+    - 重写 dataloader 效果是10分甚至9分的好(大喜)。不过这并不包括 tokenizer 的部分，所以其实还有很多的工作要做。
 - 25.03.01:\
   使用平台的vGPU开始训练。总共约 `7.7GB` 的数据，230M+ (?) 参数的模型,设计了 learning_rate = 2.5e-4, weight_decay =
   0.0001。完整训练完估计用时超过300小时，肯定不会把100个 epoch 都跑完。\
@@ -57,29 +137,3 @@
   bpe代码基本完成，随后发现训练bpe只需要大约1GB的数据即可，而非原先预想的要把所有数据跑一遍(喜)
 - 25.02.18～29:\
   下载数据集，熟悉读取代码
-
-## 数据来源(部分不考虑)
-
-- 传统文化: 还需清洗，懒得搞就不搞了
-- **基础语料**:目前就用这个了，质量比较高的中文语料，网安平台下载的
-- cci: 来源同上，还没下载来
-- oscar: 来自mnbvc的crawler文件夹
-- ~~[CLUECorpus2020](https://github.com/CLUEbenchmark/CLUECorpus2020)~~ 通过百度网盘提供，所以不想搞
-- [liwu/MNBVC](https://huggingface.co/datasets/liwu/MNBVC) 超大规模数据集，oscar是common crawl的清洗，可以作为初步预训练的语料。
-- [c4](https://hf-mirror.com/datasets/allenai/c4/tree/main/en) 可以作为英文训练
-- [smoltalk](https://opencsg.com/datasets/OpenCSG/smoltalk_chinese/files/main/data) 作为sft语料
-
-## 规划(最初的设想，并非最新)
-
-最开始的规模应该向gpt-2看齐(也许吧)。
-
-0. 训练tokenizer -> BPE ~~和embedding(?)~~
-    - 已完成: 测试```load_jsonl```函数
-    - 已完成(略微存疑？): BBPE
-1. 基础Transfomer
-    - 使用torch，或者transformers?
-2. 优化的transformer:RoPE,flash attention,swi激活函数，也许还有其他
-    - 多卡训练
-    - 更大模型
-    - accelerate库
-3. MoE架构，DS MoE？
