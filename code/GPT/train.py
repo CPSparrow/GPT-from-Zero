@@ -1,4 +1,5 @@
 import os
+import glob
 import torch
 import preprocess
 import settings
@@ -74,7 +75,13 @@ if __name__ == '__main__':
         warmup_steps=1500,
         log_level="info",
         label_smoothing_factor=0.1,
+        save_total_limit=5,
     )
+    
+    # 检查是否存在之前的检查点
+    checkpoint_dir = os.path.join(training_args.output_dir, "checkpoint-*")
+    checkpoints = [path for path in glob.glob(checkpoint_dir) if os.path.isdir(path)]
+    latest_checkpoint = max(checkpoints, key=os.path.getmtime) if checkpoints else None
     
     trainer = Trainer(
         model=model,
@@ -84,5 +91,4 @@ if __name__ == '__main__':
         data_collator=data_collator,
         processing_class=tokenizer,
     )
-    trainer.train()
-    print(data)
+    trainer.train(resume_from_checkpoint=latest_checkpoint)

@@ -62,7 +62,7 @@ def get_data():
         )
         
         del news, crawler, zhihu, en
-        data = data.train_test_split(test_size=0.2)
+        data = data.train_test_split(test_size=0.01, shuffle=True)
         data.save_to_disk(file_dir)
     return data
 
@@ -72,7 +72,7 @@ def get_tokenized(data: Dataset):
         return tokenizer(
             samples["Content"], return_tensors="pt",
             max_length=settings.config.max_length,
-            truncation=True, padding=True
+            truncation=True, padding=True,
         )
     
     tokenized_dir = os.path.join(data_pwd, "tokenized_data")
@@ -96,11 +96,8 @@ def get_tokenized(data: Dataset):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(os.path.join(data_pwd, "tokenized_data")):
-        data = get_data()
-        data = get_tokenized(data)
-    else:
-        data = get_tokenized(None)
+    data = get_data()
+    data = get_tokenized(data)
     train = data["train"].to_iterable_dataset()
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=os.path.join(settings.config.bpe_pwd, '32k_v1')

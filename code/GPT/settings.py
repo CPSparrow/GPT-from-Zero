@@ -33,12 +33,12 @@ class ModelConfig:
 config = ModelConfig(
     max_length=256,
     batch_size=4,
-    n_accumulation=1,
+    n_accumulation=32,
     n_dim=1024,
     n_head=16,
     n_layer=24,
-    learning_rate=5e-4,
-    model_pwd="/home/handsome-coder/桌面/SyncFiles/code/1.llm/code/models",
+    learning_rate=4e-4,
+    model_pwd="/home/handsome-coder/桌面/trained_models/gpt_v2",
     data_pwd="/home/handsome-coder/桌面/corpus/1.pretrain",
     bpe_pwd="/home/handsome-coder/桌面/SyncFiles/code/1.llm/code/bpe_fast"
 )
