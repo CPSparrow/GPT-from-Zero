@@ -10,6 +10,7 @@ class ModelConfig:
         model_pwd (str): 保存模型的文件夹路径。
         data_pwd (str): 语料库所在的文件夹路径。
         bpe_pwd (str): 分词器所在的文件夹路径。
+        log_pwd (str): 训练记录文件所在的路径。
         enable_reload (bool): 是否从模型文件夹中导入checkpoint
         max_length (int): The maximum length of input sequences.
         batch_size (int): The number of samples per batch.
@@ -29,6 +30,7 @@ class ModelConfig:
     model_pwd: str = ""
     data_pwd: str = ""
     bpe_pwd: str = ""
+    log_pwd: str = ""
     enable_reload: bool = False
     
     def __post_init__(self):
@@ -52,6 +54,7 @@ config = ModelConfig(
     model_pwd="",
     data_pwd="",
     bpe_pwd="",
+    log_pwd="",
     enable_reload=False,
 )
 
@@ -67,6 +70,7 @@ if __name__ == '__main__':
         model_pwd="/dir/to/save/trained/models",
         data_pwd="/dir/to/load/data/for/training",
         bpe_pwd="/dir/to/load/bpe/tokenizer",
+        log_pwd="/dir/to/save/training/logs/",
         enable_reload=False,
     )
     print(test_config)
