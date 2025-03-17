@@ -12,7 +12,7 @@ from transformers import AutoTokenizer
 data_pwd = settings.config.data_pwd
 
 
-def get_data():
+def mix_raw_text():
     cache_dir = os.path.join(data_pwd, "cache")
     file_dir = os.path.join(data_pwd, "combined_data")
     
@@ -55,6 +55,7 @@ def get_data():
             remove_columns=en.column_names, desc="处理英文语料"
         )
         
+        print("mixing dataset")
         data = interleave_datasets(
             datasets=[news, crawler, zhihu, en],
             probabilities=[0.33, 0.23, 0.33, 0.11],
@@ -62,12 +63,11 @@ def get_data():
         )
         
         del news, crawler, zhihu, en
-        data = data.train_test_split(test_size=0.01, shuffle=True)
         data.save_to_disk(file_dir)
     return data
 
 
-def get_tokenized(data: Dataset):
+def get_tokenized():
     def preprocess(samples):
         return tokenizer(
             samples["Content"], return_tensors="pt",
@@ -80,24 +80,29 @@ def get_tokenized(data: Dataset):
     if os.path.exists(tokenized_dir):
         data = load_from_disk(tokenized_dir)
     else:
+        data = load_from_disk(os.path.join(data_pwd, "combined_data"))
         tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=os.path.join(
                 settings.config.bpe_pwd, '32k_v1'
             )
         )
         data = data.map(
-            preprocess, batched=True, num_proc=12,
+            preprocess, batched=True, num_proc=16,
             drop_last_batch=True,
-            remove_columns=data["train"].column_names,
-            desc="running tokenizer"
+            remove_columns=data.column_names,
+            desc="running tokenizer",
         )
+        print("splitting dataset ")
+        data = data.train_test_split(test_size=5e-4, shuffle=True)
         data.save_to_disk(tokenized_dir)
     return data
 
 
 if __name__ == "__main__":
-    data = get_data()
-    data = get_tokenized(data)
+    data = mix_raw_text()
+    data = get_tokenized()
+    print("===== data info =====")
+    print(data)
     train = data["train"].to_iterable_dataset()
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=os.path.join(settings.config.bpe_pwd, '32k_v1')

@@ -16,17 +16,7 @@ import torch._dynamo
 if __name__ == '__main__':
     torch._dynamo.config.capture_scalar_outputs = True
     
-    data = preprocess.get_tokenized(None)
-    
-    """
-    train = data["train"].to_iterable_dataset()
-    cnt = 0
-    for index, item in enumerate(train):
-        if index >= 5000:
-            break
-        cnt += sum(item["attention_mask"])
-    print(f"avg:{cnt / 5000:.2f}")
-    """
+    data = preprocess.get_tokenized()
     
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=os.path.join(
@@ -39,27 +29,30 @@ if __name__ == '__main__':
     )
     
     cfg = GPT2Config(
-        vocab_size=tokenizer.vocab_size,
         n_embd=settings.config.n_dim,
-        torch_dtype=torch.bfloat16,
         n_positions=settings.config.max_length,
         n_head=settings.config.n_head,
         n_layer=settings.config.n_layer,
         attn_implementation="flash_attention_2",
-        bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id,
+        torch_dtype=torch.bfloat16,
+        vocab_size=tokenizer.vocab_size,
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
     )
     
     model = GPT2LMHeadModel(cfg)
     model_size = sum(t.numel() for t in model.parameters())
     print("===== About to Start =====")
-    print(f"Model size: {model_size / 1000 ** 2:.1f}M parameters")
+    print(f"Model size: {model_size / 1000 ** 2:.2f}M parameters")
     
     training_args = TrainingArguments(
         output_dir=settings.config.model_pwd,
         eval_strategy="steps",
         save_strategy="steps",
-        eval_steps=250,
-        save_steps=500,
+        logging_strategy="steps",
+        eval_steps=400,
+        save_steps=1000,
+        logging_steps=200,
         per_device_train_batch_size=settings.config.batch_size,
         per_device_eval_batch_size=settings.config.batch_size,
         learning_rate=settings.config.learning_rate,
@@ -74,21 +67,30 @@ if __name__ == '__main__':
         lr_scheduler_type="cosine_with_restarts",
         warmup_steps=1500,
         log_level="info",
-        label_smoothing_factor=0.1,
         save_total_limit=5,
+        dataloader_num_workers=4,
+        remove_unused_columns=False,
     )
     
-    # 检查是否存在之前的检查点
-    checkpoint_dir = os.path.join(training_args.output_dir, "checkpoint-*")
-    checkpoints = [path for path in glob.glob(checkpoint_dir) if os.path.isdir(path)]
-    latest_checkpoint = max(checkpoints, key=os.path.getmtime) if checkpoints else None
+    if settings.config.enable_reload:
+        # 检查是否存在之前的检查点
+        checkpoint_dir = os.path.join(training_args.output_dir, "checkpoint-*")
+        checkpoints = [
+            path for path in glob.glob(checkpoint_dir) if os.path.isdir(path)
+        ]
+        latest_checkpoint = max(checkpoints, key=os.path.getmtime) \
+            if checkpoints else None
     
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=data["train"],
-        eval_dataset=data["train"],
+        eval_dataset=data["test"],
         data_collator=data_collator,
         processing_class=tokenizer,
     )
-    trainer.train(resume_from_checkpoint=latest_checkpoint)
+    if settings.config.enable_reload:
+        assert latest_checkpoint is not None, "检查点导入有误"
+        trainer.train(resume_from_checkpoint=latest_checkpoint)
+    else:
+        trainer.train()
