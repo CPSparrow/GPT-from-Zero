@@ -24,6 +24,7 @@ if __name__ == '__main__':
         )
     )
     
+    tokenizer.pad_token = tokenizer.eos_token
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False,
     )
@@ -50,15 +51,14 @@ if __name__ == '__main__':
         eval_strategy="steps",
         save_strategy="steps",
         logging_strategy="steps",
-        eval_steps=400,
+        eval_steps=2000,
         save_steps=1000,
-        logging_steps=200,
+        logging_steps=300,
         per_device_train_batch_size=settings.config.batch_size,
         per_device_eval_batch_size=settings.config.batch_size,
         learning_rate=settings.config.learning_rate,
         weight_decay=0.01,
-        num_train_epochs=100,
-        dataloader_drop_last=True,
+        num_train_epochs=2,
         bf16=True,
         gradient_accumulation_steps=settings.config.n_accumulation,
         optim="adamw_torch_fused",
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         lr_scheduler_type="cosine_with_restarts",
         warmup_steps=1500,
         log_level="info",
-        save_total_limit=5,
+        save_total_limit=6,
         dataloader_num_workers=4,
         remove_unused_columns=False,
     )
@@ -87,7 +87,6 @@ if __name__ == '__main__':
         train_dataset=data["train"],
         eval_dataset=data["test"],
         data_collator=data_collator,
-        processing_class=tokenizer,
     )
     if settings.config.enable_reload:
         assert latest_checkpoint is not None, "检查点导入有误"

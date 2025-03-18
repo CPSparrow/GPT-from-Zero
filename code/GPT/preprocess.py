@@ -2,7 +2,7 @@ import os
 import settings
 from datasets import (
     load_dataset,
-    interleave_datasets,
+    concatenate_datasets,
     load_from_disk,
     DatasetInfo,
     Dataset,
@@ -24,8 +24,8 @@ def mix_raw_text():
             split=f"train[:]", num_proc=12
         )
         news = news.map(
-            lambda x: x, num_proc=12, batched=True, remove_columns=["ID"],
-            desc="处理中文新闻"
+            lambda x: x, num_proc=12, batched=True,
+            remove_columns=["ID"], desc="处理中文新闻"
         )
         
         crawler = load_dataset(
@@ -42,8 +42,8 @@ def mix_raw_text():
             split=f"train[:]", num_proc=12
         )
         zhihu = zhihu.map(
-            lambda x: {"Content": "问：" + x["问"] + "答：" + x["答"]}, num_proc=12,
-            remove_columns=zhihu.column_names, desc="处理知乎问答"
+            lambda x: {"Content": "问：" + x["问"] + "答：" + x["答"]},
+            num_proc=12, remove_columns=zhihu.column_names, desc="处理知乎问答"
         )
         
         en = load_dataset(
@@ -55,11 +55,9 @@ def mix_raw_text():
             remove_columns=en.column_names, desc="处理英文语料"
         )
         
-        print("mixing dataset")
-        data = interleave_datasets(
-            datasets=[news, crawler, zhihu, en],
-            probabilities=[0.33, 0.23, 0.33, 0.11],
-            info=DatasetInfo(description="mixed dataset,to be tokenized.")
+        data = concatenate_datasets(
+            dsets=[news, crawler, zhihu, en],
+            info=DatasetInfo(description="concating dataset,to be tokenized.")
         )
         
         del news, crawler, zhihu, en
@@ -68,13 +66,21 @@ def mix_raw_text():
 
 
 def get_tokenized():
-    def preprocess(samples):
-        return tokenizer(
-            samples["Content"], return_tensors="pt",
-            max_length=settings.config.max_length,
-            truncation=True, padding=True,
+    def tokenize(samples):
+        outputs = tokenizer(
+            samples["Content"],
+            truncation=True,
+            max_length=max_length,
+            return_overflowing_tokens=True,
+            return_length=True, stride=10,
         )
+        input_batch = []
+        for length, input_ids in zip(outputs["length"], outputs["input_ids"]):
+            if length == max_length:
+                input_batch.append(input_ids)
+        return {"input_ids": input_batch}
     
+    max_length = settings.config.max_length
     tokenized_dir = os.path.join(data_pwd, "tokenized_data")
     
     if os.path.exists(tokenized_dir):
@@ -87,13 +93,12 @@ def get_tokenized():
             )
         )
         data = data.map(
-            preprocess, batched=True, num_proc=16,
-            drop_last_batch=True,
+            tokenize, batched=True, num_proc=12,
             remove_columns=data.column_names,
             desc="running tokenizer",
         )
-        print("splitting dataset ")
-        data = data.train_test_split(test_size=5e-4, shuffle=True)
+        print("splitting dataset")
+        data = data.train_test_split(test_size=5.5e-3, shuffle=True)
         data.save_to_disk(tokenized_dir)
     return data
 
@@ -103,13 +108,3 @@ if __name__ == "__main__":
     data = get_tokenized()
     print("===== data info =====")
     print(data)
-    train = data["train"].to_iterable_dataset()
-    tokenizer = AutoTokenizer.from_pretrained(
-        pretrained_model_name_or_path=os.path.join(settings.config.bpe_pwd, '32k_v1')
-    )
-    cnt = 0
-    for index, item in enumerate(train):
-        if index >= 5000:
-            break
-        cnt += sum(item["attention_mask"])
-    print(f"avg:{cnt / 5000:.2f}")

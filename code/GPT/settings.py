@@ -46,7 +46,7 @@ class ModelConfig:
 config = ModelConfig(
     max_length=256,
     batch_size=56,
-    n_accumulation=10,
+    n_accumulation=4,
     n_dim=1024,
     n_head=16,
     n_layer=24,
@@ -59,18 +59,20 @@ config = ModelConfig(
 )
 
 if __name__ == '__main__':
-    test_config = ModelConfig(
-        max_length=256,
-        batch_size=56,
-        n_accumulation=10,
-        n_dim=1024,
-        n_head=16,
-        n_layer=24,
-        learning_rate=4e-4,
-        model_pwd="/dir/to/save/trained/models",
-        data_pwd="/dir/to/load/data/for/training",
-        bpe_pwd="/dir/to/load/bpe/tokenizer",
-        log_pwd="/dir/to/save/training/logs/",
-        enable_reload=False,
-    )
-    print(test_config)
+    pass
+    # 只在测试的时候使用
+    # test_config = ModelConfig(
+    #     max_length=256,
+    #     batch_size=56,
+    #     n_accumulation=10,
+    #     n_dim=1024,
+    #     n_head=16,
+    #     n_layer=24,
+    #     learning_rate=4e-4,
+    #     model_pwd="/dir/to/save/trained/models",
+    #     data_pwd="/dir/to/load/data/for/training",
+    #     bpe_pwd="/dir/to/load/bpe/tokenizer",
+    #     log_pwd="/dir/to/save/training/logs/",
+    #     enable_reload=False,
+    # )
+    # print(test_config)

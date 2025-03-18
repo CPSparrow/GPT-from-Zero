@@ -4,7 +4,7 @@
 
 | 接下来的计划                                        |
 |:----------------------------------------------|
-| 增加 total tokens cnt 功能                        |
+| 增加 total tokens estimate 功能                   |
 | 深入了解各个数据集，准备构建更“稠密”的数据                        |
 | 阅读论文、查阅资料，了解batch_size,epoch和learning_rate的设置 |
 
