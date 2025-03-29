@@ -1,16 +1,28 @@
 # 从0开始的**中文GPT-2**训练冒险😘️
 
-## todo
+## todo & notes
 
-| 接下来的计划                                        |
-|:----------------------------------------------|
-| 增加 total tokens estimate 功能                   |
-| 深入了解各个数据集，准备构建更“稠密”的数据                        |
-| 阅读论文、查阅资料，了解batch_size,epoch和learning_rate的设置 |
+不错的参考资料：[GPT-2复现笔记](https://zhuanlan.zhihu.com/p/16880416388)
+
+| 接下来的计划 |
+|:-------|
+| NaN    |
 
 ## 进度(Updates)
 
 > 以往的记录已经被转移到 [`milestone`](./milestone.md) 文件中。
+
+- 25.03.29:
+
+  > 补充原先的训练结果：大约基于 0.5B tokens ，2 epoch 训练的 GPT-2 like 模型(300M)。模型没有体现出对语言的理解能力，只是复读和重复最开始的输出。
+
+  接下来的计划 ： **再次重构该项目**
+
+  主要的变化将会是：
+
+    - 重新下载更大的数据
+    - 使用语料库从0训练 tokenizer ,预计训练3个不同的版本。
+    - 使用 LLaMa 的架构训练小模型。超参数可能参考上述 **复现笔记** ，或是之后去阅读LLaMa的论文。
 
 - 25.03.17：
 
@@ -24,7 +36,7 @@
         2. 调整保存记录的代码
         3. 为“单机多卡”以及“从中断的地方继续训练”做了准备，不过都是没有验证的代码
 
-## 数据来源(部分并不会考虑，并非最新)
+## 数据来源(未更新)
 
 - 传统文化: 还需清洗，懒得搞就不搞了
 - **基础语料**:目前就用这个了，质量比较高的中文语料，网安平台下载的
@@ -35,15 +47,6 @@
 - [c4](https://hf-mirror.com/datasets/allenai/c4/tree/main/en) 可以作为英文训练
 - [smoltalk](https://opencsg.com/datasets/OpenCSG/smoltalk_chinese/files/main/data) 作为sft语料
 
-## 数据集预处理笔记
-
-|   数据集   |  数据条数   |   文件大小 | 来源            |
-|:-------:|:-------:|-------:|:--------------|
-|  news   | 67_6028 | 2.10GB | 网安平台  基础语料    |
-| crawler | 38_9713 | 0.23GB | mnbvc crawler |
-|  zhihu  | 65_3692 | 1.40GB | mnbvc zhihu   |
-|   en    | 35_6317 | 0.77GB | 上述的 c4        |
-
 ## 环境配置笔记
 
 主要是为了上云和重置的时候方便查阅：
@@ -53,7 +56,7 @@
 installation:
 
 ```shell
-pip install torch torchvision torchaudio
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pip install transformers datasets accelerate optimum
 pip install pandas ninja packaging
 ```

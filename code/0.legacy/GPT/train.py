@@ -1,8 +1,7 @@
 import os
 import glob
-import torch
 import preprocess
-import settings
+from code.train_models import settings
 from transformers import (
     DataCollatorForLanguageModeling,
     AutoTokenizer,
@@ -20,7 +19,7 @@ if __name__ == '__main__':
     
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=os.path.join(
-            settings.config.bpe_pwd, "32k_v1"
+            settings.config.bpe_dir, "32k_v1"
         )
     )
     
@@ -47,7 +46,7 @@ if __name__ == '__main__':
     print(f"Model size: {model_size / 1000 ** 2:.2f}M parameters")
     
     training_args = TrainingArguments(
-        output_dir=settings.config.model_pwd,
+        output_dir=settings.config.model_dir,
         eval_strategy="steps",
         save_strategy="steps",
         logging_strategy="steps",

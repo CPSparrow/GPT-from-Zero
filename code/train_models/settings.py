@@ -7,10 +7,10 @@ class ModelConfig:
     A simple data class that contains model config.
     
     Attributes:
-        model_pwd (str): 保存模型的文件夹路径。
-        data_pwd (str): 语料库所在的文件夹路径。
-        bpe_pwd (str): 分词器所在的文件夹路径。
-        log_pwd (str): 训练记录文件所在的路径。
+        model_dir (str): 保存模型的文件夹路径。
+        data_dir (str): 语料库所在的文件夹路径。
+        bpe_dir (str): 分词器所在的文件夹路径。
+        log_dir (str): 训练记录文件所在的路径。
         enable_reload (bool): 是否从模型文件夹中导入checkpoint
         max_length (int): The maximum length of input sequences.
         batch_size (int): The number of samples per batch.
@@ -27,17 +27,18 @@ class ModelConfig:
     n_head: int = 0
     n_layer: int = 0
     learning_rate: float = 0
-    model_pwd: str = ""
-    data_pwd: str = ""
-    bpe_pwd: str = ""
-    log_pwd: str = ""
+    model_dir: str = ""
+    data_dir: str = ""
+    bpe_dir: str = ""
+    log_dir: str = ""
     enable_reload: bool = False
     
     def __post_init__(self):
         pwd_dict = {
-            "model_pwd": self.model_pwd,
-            "data_pwd": self.data_pwd,
-            "bpe_pwd": self.bpe_pwd,
+            "model_pwd": self.model_dir,
+            "data_pwd" : self.data_dir,
+            "bpe_pwd"  : self.bpe_dir,
+            "log_pwd"  : self.log_dir,
         }
         for name, dir in pwd_dict.items():
             assert dir is not None and dir != "", f"{name}不能为空白路径"
@@ -51,10 +52,10 @@ config = ModelConfig(
     n_head=16,
     n_layer=24,
     learning_rate=4e-4,
-    model_pwd="",
-    data_pwd="",
-    bpe_pwd="",
-    log_pwd="",
+    model_dir="/left/empty",
+    data_dir="/home/coder/Documents/CodeAndFiles/Corpus",
+    bpe_dir="/home/coder/Documents/CodeAndFiles/SyncFiles/code/1.llm/code/bpe_models",
+    log_dir="/left/empty",
     enable_reload=False,
 )
 
