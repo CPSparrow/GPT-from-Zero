@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class ModelConfig:
     """
     A simple data class that contains model config.
-    
+
     Attributes:
         model_dir (str): 保存模型的文件夹路径。
         data_dir (str): 语料库所在的文件夹路径。
@@ -24,6 +24,7 @@ class ModelConfig:
     max_length: int = 0
     batch_size: int = 0
     n_accumulation: int = 0
+    n_steps: int = 0
     n_dim: int = 0
     n_hidden: int = 0
     n_head: int = 0
@@ -33,7 +34,6 @@ class ModelConfig:
     data_dir: str = ""
     bpe_dir: str = ""
     log_dir: str = ""
-    enable_reload: bool = False
     
     def __post_init__(self):
         pwd_dict = {
@@ -48,18 +48,18 @@ class ModelConfig:
 
 config = ModelConfig(
     max_length=256,
-    batch_size=2,
-    n_accumulation=1,
+    batch_size=128,
+    n_accumulation=10,
+    n_steps=10_600,
     n_dim=768,
     n_hidden=2304,
     n_head=12,
     n_layer=16,
-    learning_rate=1.3e-3,
+    learning_rate=1.35e-3,
     model_dir="/home/coder/Documents/CodeAndFiles/Models/TestRun/",
     data_dir="/home/coder/Documents/CodeAndFiles/Corpus",
     bpe_dir="/home/coder/Documents/CodeAndFiles/SyncFiles/code/1.llm/code/bpe_models",
     log_dir="/home/coder/Documents/CodeAndFiles/Models/TestRun/logs",
-    enable_reload=False,
 )
 
 if __name__ == '__main__':

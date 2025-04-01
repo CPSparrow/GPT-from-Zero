@@ -12,6 +12,7 @@ from transformers import (
 )
 
 if __name__ == "__main__":
+    print('pre load finished')
     tokenized_oscar = generate_training_data.get_lm_data()
     
     tokenizer = AutoTokenizer.from_pretrained(
@@ -43,29 +44,31 @@ if __name__ == "__main__":
     
     training_args = TrainingArguments(
         num_train_epochs=1.83,
+        max_steps=config.n_steps,
         warmup_steps=1500,
         output_dir=config.model_dir,
+        logging_dir=config.log_dir,
         per_device_train_batch_size=config.batch_size,
-        per_device_eval_batch_size=config.batch_size * 3,
+        per_device_eval_batch_size=config.batch_size,
         learning_rate=config.learning_rate,
         gradient_accumulation_steps=config.n_accumulation,
         eval_strategy="steps",
         save_strategy="steps",
         logging_strategy="steps",
-        eval_steps=2000,
-        save_steps=1000,
-        logging_steps=150,
+        eval_steps=1000,
+        save_steps=500,
+        logging_steps=20,
         log_level="info",
         bf16=True,
         # tf32=True,
         optim="adamw_torch_fused",
-        # torch_compile=True,
+        torch_compile=True,
         adam_beta2=0.95,
         lr_scheduler_type="cosine",
         save_total_limit=8,
         dataloader_num_workers=4,
         weight_decay=0.01,
-        include_tokens_per_second=True,
+        # include_tokens_per_second=True,
         # remove_unused_columns=False,
     )
     

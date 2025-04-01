@@ -104,5 +104,6 @@ if __name__ == "__main__":
     # oscar = extract_content()
     # print(oscar)
     tokenized_data = get_lm_data()
+    # 1.77e+09 tokens
     print(
         f"{len(tokenized_data['train'])} samples,{len(tokenized_data['train']) * config.max_length:.2e} tokens for train split")

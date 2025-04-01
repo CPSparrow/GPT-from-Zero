@@ -25,7 +25,7 @@ def estimate(n_layer, n_dim, l_seq, vocab=32768):
     print(f"learning rate (lr)            : {lr:.2e}")
     print(f"batch size (in tokens)        : {batch_size:.2e}")
     print(f"batch size (n_samples)        : {batch_size / l_seq:.0f}")
-    print(f"Estimate Total Steps          : {D / batch_size:.0f}")
+    print(f"Total Samples Trained         : {D / l_seq / 1e3:.0f}k")
     print(f"Estimate GPU Hours Consumed   : {C / 2.38e18 * 12:.1f} ")
     print('')
 
