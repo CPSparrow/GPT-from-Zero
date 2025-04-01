@@ -16,6 +16,7 @@ class ModelConfig:
         batch_size (int): The number of samples per batch.
         n_accumulation (int): The number of batches to accumulate.
         n_dim (int): The dimensionality of the model's embeddings.
+        n_hidden (int): The number of hidden dims in the model.
         n_head (int): The number of attention heads.
         n_layer (int): The number of layers in the model.
         learning_rate (float): The learning rate for the optimizer.
@@ -24,6 +25,7 @@ class ModelConfig:
     batch_size: int = 0
     n_accumulation: int = 0
     n_dim: int = 0
+    n_hidden: int = 0
     n_head: int = 0
     n_layer: int = 0
     learning_rate: float = 0
@@ -46,22 +48,23 @@ class ModelConfig:
 
 config = ModelConfig(
     max_length=256,
-    batch_size=56,
-    n_accumulation=4,
-    n_dim=1024,
-    n_head=16,
-    n_layer=24,
-    learning_rate=4e-4,
-    model_dir="/left/empty",
+    batch_size=2,
+    n_accumulation=1,
+    n_dim=768,
+    n_hidden=2304,
+    n_head=12,
+    n_layer=16,
+    learning_rate=1.3e-3,
+    model_dir="/home/coder/Documents/CodeAndFiles/Models/TestRun/",
     data_dir="/home/coder/Documents/CodeAndFiles/Corpus",
     bpe_dir="/home/coder/Documents/CodeAndFiles/SyncFiles/code/1.llm/code/bpe_models",
-    log_dir="/left/empty",
+    log_dir="/home/coder/Documents/CodeAndFiles/Models/TestRun/logs",
     enable_reload=False,
 )
 
 if __name__ == '__main__':
     pass
-    # 只在测试的时候使用
+    # 只在测试ModelConfig类的时候使用
     # test_config = ModelConfig(
     #     max_length=256,
     #     batch_size=56,

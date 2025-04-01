@@ -1,5 +1,9 @@
 # 从0开始的**中文GPT-2**训练冒险😘️
 
+## 踩坑记录(to be added)
+
+1. BpeTrainer 中的 max_token_length
+
 ## todo & notes
 
 不错的参考资料：[GPT-2复现笔记](https://zhuanlan.zhihu.com/p/16880416388)
@@ -12,6 +16,14 @@
 ## 进度(Updates)
 
 > 以往的记录已经被转移到 [`milestone`](./milestone.md) 文件中。
+
+- 25.3.31:
+
+  重新训练了基于新语料库的 bpe tokenizer
+  ,基本上是按照
+  [HuggingFace Learn 的 bpe 教程](https://huggingface.co/learn/nlp-course/chapter6/8?fw=pt#building-a-bpe-tokenizer-from-scratch)
+  完成的。这里面选择的 12 个 epoch 每次 40k 个样本的设置主要是根据本机内存 16GB
+  的情况确定的。因为原始语料库随机打乱过，所以可以认为数据的“密度”是比较平均的，即用于训练的总共480k样本对应 1.27GB 的文本
 
 - 25.3.30：
 

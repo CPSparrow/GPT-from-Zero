@@ -1,5 +1,6 @@
 import os
-import settings
+from settings import config
+from transformers import AutoTokenizer
 from datasets import (
     load_dataset,
     concatenate_datasets,
@@ -7,10 +8,11 @@ from datasets import (
     Dataset,
 )
 
-data_dir = settings.config.data_dir
+data_dir = config.data_dir
 cache_dir = os.path.join(data_dir, "cache")
 raw_file_dir = os.path.join(data_dir, "raw")
 cleaned_file_dir = os.path.join(data_dir, "cleaned")
+tokenized_file_dir = os.path.join(data_dir, "tokenized")
 
 
 def extract_from_batch(dict_samples):
@@ -24,6 +26,47 @@ def extract_from_batch(dict_samples):
         assert isinstance(sample, list)
         result.append("".join([i['内容'] for i in sample]))
     return {'Content': result}
+
+
+def get_lm_data():
+    """
+    Return the tokenized data.
+    """
+    
+    def tokenize(samples):
+        outputs = tokenizer(
+            samples["Content"],
+            truncation=True,
+            max_length=max_length,
+            return_overflowing_tokens=True,
+            return_length=True, stride=10,
+        )
+        input_batch = []
+        for length, input_ids in zip(outputs["length"], outputs["input_ids"]):
+            if length == max_length:
+                input_batch.append(input_ids)
+        return {"input_ids": input_batch}
+    
+    max_length = config.max_length
+    
+    if os.path.exists(tokenized_file_dir):
+        tokenized_data = load_from_disk(tokenized_file_dir)
+    else:
+        tokenized_data = load_from_disk(os.path.join(cleaned_file_dir, "crawl_oscar"))
+        tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=os.path.join(
+                config.bpe_dir, '32k_v2_1'
+            )
+        )
+        tokenized_data = tokenized_data.map(
+            tokenize, batched=True, num_proc=20,
+            remove_columns=tokenized_data.column_names,
+            desc="running tokenizer",
+        )
+        print("splitting dataset")
+        tokenized_data = tokenized_data.train_test_split(test_size=0.05, shuffle=False)
+        tokenized_data.save_to_disk(tokenized_file_dir)
+    return tokenized_data
 
 
 def extract_content():
@@ -58,5 +101,8 @@ def extract_content():
 
 
 if __name__ == "__main__":
-    oscar = extract_content()
-    print(oscar)
+    # oscar = extract_content()
+    # print(oscar)
+    tokenized_data = get_lm_data()
+    print(
+        f"{len(tokenized_data['train'])} samples,{len(tokenized_data['train']) * config.max_length:.2e} tokens for train split")
