@@ -22,15 +22,17 @@ def estimate(n_layer, n_dim, l_seq, vocab=32768):
     print(f"None Embedding FLOPs/Token(M) : {M / 1e6:.2f}M (10^{log10(M):.1f})")
     print(f"Computing Budget (C)          : {C:.2e} ")
     print(f"Data Scale (in tokens)        : {D:.2e} ")
+    print(f"Data Scale (tokenize data)    : {D / 1.77e9 * 7:.1f}GB ")
     print(f"learning rate (lr)            : {lr:.2e}")
     print(f"batch size (in tokens)        : {batch_size:.2e}")
     print(f"batch size (n_samples)        : {batch_size / l_seq:.0f}")
-    print(f"Total Samples Trained         : {D / l_seq / 1e3:.0f}k")
-    print(f"Estimate GPU Hours Consumed   : {C / 2.38e18 * 12:.1f} ")
+    print(f"Total Samples                 : {D / l_seq / 1e3:.0f}k")
+    print(f"Total Steps                   : {D / batch_size:.0f}")
+    # print(f"Estimate GPU Hours Consumed   : {C / 2.38e18 * 12:.1f} ")
     print('')
 
 
 # previous model
 estimate(24, 1024, 256)
 
-estimate(16, 768, 256)
+estimate(16, 1024, 512)
